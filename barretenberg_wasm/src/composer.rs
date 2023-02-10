@@ -128,8 +128,6 @@ impl StandardComposer {
     }
 
     pub fn create_proof(&mut self, witness: WitnessAssignments) -> Vec<u8> {
-        let now = std::time::Instant::now();
-
         let cs_buf = self.constraint_system.to_bytes();
         let cs_ptr = self.barretenberg.allocate(&cs_buf);
 
@@ -159,11 +157,6 @@ impl StandardComposer {
             proof_ptr as usize,
             proof_ptr as usize + proof_size.unwrap_i32() as usize,
         );
-        println!(
-            "Total Proving time (Rust + WASM) : {}ns ~ {}seconds",
-            now.elapsed().as_nanos(),
-            now.elapsed().as_secs(),
-        );
         remove_public_inputs(self.constraint_system.public_inputs.len(), proof)
     }
 
@@ -184,12 +177,11 @@ impl StandardComposer {
         if let Some(pi) = &public_inputs {
             let mut proof_with_pi = Vec::new();
             for assignment in pi.0.iter() {
-                proof_with_pi.extend(&assignment.to_bytes());
+                proof_with_pi.extend(&assignment.to_be_bytes());
             }
             proof_with_pi.extend(proof);
             proof = proof_with_pi;
         }
-        let now = std::time::Instant::now();
 
         let cs_buf = self.constraint_system.to_bytes();
         let cs_ptr = self.barretenberg.allocate(&cs_buf);
@@ -215,12 +207,6 @@ impl StandardComposer {
         // self.barretenberg.free(cs_ptr);
         self.barretenberg.free(proof_ptr);
         // self.barretenberg.free(g2_ptr);
-
-        println!(
-            "Total Verifier time (Rust + WASM) : {}ns ~ {}seconds",
-            now.elapsed().as_nanos(),
-            now.elapsed().as_secs(),
-        );
 
         match verified.unwrap_i32() {
             0 => false,
